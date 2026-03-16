@@ -4,6 +4,7 @@ import '../../data/models/customer_model.dart';
 import '../../data/models/transaction_model.dart';
 import '../../data/repositories/transaction_repository.dart';
 import 'add_transaction_screen.dart';
+import 'edit_customer_screen.dart';
 
 class CustomerDetailScreen extends StatefulWidget {
   final CustomerModel customer;
@@ -48,6 +49,20 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
         title: Text(widget.customer.name),
         backgroundColor: const Color(0xFF1E88E5),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () async {
+              final updated = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => EditCustomerScreen(customer: widget.customer),
+                ),
+              );
+              if (updated == true) _loadData();
+            },
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

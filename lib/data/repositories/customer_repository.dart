@@ -41,4 +41,19 @@ class CustomerRepository {
   Future<void> deleteCustomer(String customerId) async {
     await _supabase.from('customers').delete().eq('id', customerId);
   }
+
+  Future<void> updateCustomer({
+    required String customerId,
+    required String name,
+    String? phone,
+    String? address,
+    String? notes,
+  }) async {
+    await _supabase.from('customers').update({
+      'name': name,
+      'phone': phone,
+      'address': address,
+      'notes': notes,
+    }).eq('id', customerId);
+  }
 }
