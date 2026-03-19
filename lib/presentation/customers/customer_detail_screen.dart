@@ -129,8 +129,15 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (t.description != null)
-                          Text(t.description!),
+                        if (t.description != null) Text(t.description!),
+                        if (t.interestAmount > 0)
+                          Text(
+                            'Principal: ₱${_formatter.format(t.amount)} + '
+                                'Interest: ₱${_formatter.format(t.interestAmount)} '
+                                '(${(t.interestAmount / t.amount * 100).toStringAsFixed(0)}%)',
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.orange),
+                          ),
                         Text(
                           DateFormat('MMM dd, yyyy').format(t.date),
                           style: const TextStyle(fontSize: 12),
@@ -138,7 +145,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                       ],
                     ),
                     trailing: Text(
-                      '${isUtang ? '+' : '-'}₱${_formatter.format(t.amount)}',
+                      '${isUtang ? '+' : '-'}₱${_formatter.format(
+                          isUtang ? t.totalWithInterest : t.amount)}',
                       style: TextStyle(
                         color: isUtang
                             ? const Color(0xFFE53935)

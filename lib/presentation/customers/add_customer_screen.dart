@@ -13,6 +13,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
   final _notesController = TextEditingController();
+  final _interestRateController = TextEditingController();
   bool _isLoading = false;
   final _repo = CustomerRepository();
 
@@ -37,6 +38,8 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
         notes: _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
+        interestRate: double.tryParse(
+            _interestRateController.text) ?? 0,
       );
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -93,6 +96,16 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
               decoration: const InputDecoration(
                 labelText: 'Notes',
                 prefixIcon: Icon(Icons.note),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _interestRateController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Interest Rate (%) — optional',
+                hintText: 'Ex: 10 para sa 10%',
+                prefixIcon: Icon(Icons.percent),
               ),
             ),
             const SizedBox(height: 24),

@@ -15,6 +15,7 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> {
   late TextEditingController _phoneController;
   late TextEditingController _addressController;
   late TextEditingController _notesController;
+  late TextEditingController _interestRateController;
   bool _isLoading = false;
   final _repo = CustomerRepository();
 
@@ -26,6 +27,11 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> {
     _phoneController = TextEditingController(text: widget.customer.phone ?? '');
     _addressController = TextEditingController(text: widget.customer.address ?? '');
     _notesController = TextEditingController(text: widget.customer.notes ?? '');
+    _interestRateController = TextEditingController(
+      text: widget.customer.interestRate > 0
+          ? widget.customer.interestRate.toString()
+          : '',
+    );
   }
 
   Future<void> _save() async {
@@ -47,6 +53,8 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> {
             ? null : _addressController.text.trim(),
         notes: _notesController.text.trim().isEmpty
             ? null : _notesController.text.trim(),
+        interestRate: double.tryParse(
+            _interestRateController.text) ?? 0,
       );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -103,6 +111,16 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> {
               decoration: const InputDecoration(
                 labelText: 'Notes',
                 prefixIcon: Icon(Icons.note),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _interestRateController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Interest Rate (%) — optional',
+                hintText: 'Ex: 10 para sa 10%',
+                prefixIcon: Icon(Icons.percent),
               ),
             ),
             const SizedBox(height: 24),

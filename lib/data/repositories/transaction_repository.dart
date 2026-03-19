@@ -22,6 +22,7 @@ class TransactionRepository {
     required String customerId,
     required String type,
     required double amount,
+    double interestAmount = 0,
     String? description,
     required DateTime date,
   }) async {
@@ -31,6 +32,7 @@ class TransactionRepository {
       'user_id': userId,
       'type': type,
       'amount': amount,
+      'interest_amount': interestAmount,
       'description': description,
       'date': date.toIso8601String().split('T')[0],
     }).select().single();
@@ -44,7 +46,7 @@ class TransactionRepository {
     double total = 0;
     for (final t in transactions) {
       if (t.type == 'utang') {
-        total += t.amount;
+        total += t.amount + t.interestAmount;
       } else {
         total -= t.amount;
       }
@@ -58,14 +60,15 @@ class TransactionRepository {
 
     final response = await _supabase
         .from('transactions')
-        .select('type, amount')
+        .select('type, amount, interest_amount')
         .eq('user_id', userId);
 
     double total = 0;
     for (final t in response as List) {
       final amount = (t['amount'] as num).toDouble();
+      final interest = (t['interest_amount'] as num?)?.toDouble() ?? 0;
       if (t['type'] == 'utang') {
-        total += amount;
+        total += amount + interest;
       } else {
         total -= amount;
       }

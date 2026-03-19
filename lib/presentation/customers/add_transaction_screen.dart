@@ -24,6 +24,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
   double _currentUtang = 0;
+  double _computedInterest = 0;
   bool _isLoadingUtang = true;
   final _repo = TransactionRepository();
   final _formatter = NumberFormat('#,##0.00', 'en_PH');
@@ -33,6 +34,18 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     super.initState();
     _selectedType = widget.initialType;
     _loadCurrentUtang();
+    // I-listen ang amount changes para real-time interest computation
+    _amountController.addListener(_computeInterest);
+  }
+
+  void _computeInterest() {
+    if (_selectedType == 'utang') {
+      final amount = double.tryParse(_amountController.text) ?? 0;
+      setState(() {
+        _computedInterest =
+            amount * (widget.customer.interestRate / 100);
+      });
+    }
   }
 
   // Kunin ang current utang ng customer
@@ -88,6 +101,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         customerId: widget.customer.id,
         type: _selectedType,
         amount: amount,
+        interestAmount: _selectedType == 'utang'
+            ? _computedInterest : 0,
         description: _descriptionController.text.trim().isEmpty
             ? null
             : _descriptionController.text.trim(),
@@ -272,6 +287,54 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 prefixIcon: const Icon(Icons.money),
               ),
             ),
+            if (_selectedType == 'utang' &&
+                widget.customer.interestRate > 0) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3E0),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Principal:'),
+                        Text('₱${_formatter.format(
+                            double.tryParse(_amountController.text) ?? 0)}'),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Interest (${widget.customer.interestRate}%):'),
+                        Text('₱${_formatter.format(_computedInterest)}',
+                            style: const TextStyle(color: Colors.orange)),
+                      ],
+                    ),
+                    const Divider(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Total:',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(
+                          '₱${_formatter.format(
+                              (double.tryParse(_amountController.text) ?? 0) +
+                                  _computedInterest)}',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFE53935)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
 
             // Description

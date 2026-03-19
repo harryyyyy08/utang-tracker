@@ -5,8 +5,10 @@ class CustomerModel {
   final String? phone;
   final String? address;
   final String? notes;
+  final double interestRate; // ← bago
   final DateTime createdAt;
   double totalUtang;
+  double totalInterest; // ← bago
 
   CustomerModel({
     required this.id,
@@ -15,8 +17,10 @@ class CustomerModel {
     this.phone,
     this.address,
     this.notes,
+    this.interestRate = 0,
     required this.createdAt,
     this.totalUtang = 0,
+    this.totalInterest = 0,
   });
 
   factory CustomerModel.fromJson(Map<String, dynamic> json) {
@@ -27,6 +31,7 @@ class CustomerModel {
       phone: json['phone'],
       address: json['address'],
       notes: json['notes'],
+      interestRate: (json['interest_rate'] as num?)?.toDouble() ?? 0,
       createdAt: DateTime.parse(json['created_at']),
     );
   }

@@ -24,6 +24,7 @@ class CustomerRepository {
     String? phone,
     String? address,
     String? notes,
+    double interestRate = 0,
   }) async {
     final userId = _supabase.auth.currentUser!.id;
     final response = await _supabase.from('customers').insert({
@@ -32,6 +33,7 @@ class CustomerRepository {
       'phone': phone,
       'address': address,
       'notes': notes,
+      'interest_rate': interestRate,
     }).select().single();
 
     return CustomerModel.fromJson(response);
@@ -48,12 +50,14 @@ class CustomerRepository {
     String? phone,
     String? address,
     String? notes,
+    double interestRate = 0,
   }) async {
     await _supabase.from('customers').update({
       'name': name,
       'phone': phone,
       'address': address,
       'notes': notes,
+      'interest_rate': interestRate,
     }).eq('id', customerId);
   }
 }
