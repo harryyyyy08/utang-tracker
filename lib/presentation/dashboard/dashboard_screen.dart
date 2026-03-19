@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../providers/customer_provider.dart';
+import '../../providers/subscription_provider.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -10,6 +11,7 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final customersAsync = ref.watch(customersProvider);
     final totalUtangAsync = ref.watch(totalUtangProvider);
+    final subAsync = ref.watch(subscriptionProvider);
     final formatter = NumberFormat('#,##0.00', 'en_PH');
 
     return Scaffold(
@@ -23,6 +25,7 @@ class DashboardScreen extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(customersProvider);
           ref.invalidate(totalUtangProvider);
+          ref.invalidate(subscriptionProvider);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -30,6 +33,52 @@ class DashboardScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+
+              // Trial Banner
+              subAsync.when(
+                data: (sub) {
+                  if (sub.status == SubscriptionStatus.trial &&
+                      sub.daysRemaining <= 7) {
+                    return Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.warning_amber,
+                              color: Colors.orange),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              sub.daysRemaining == 0
+                                  ? 'Mag-e-expire na ang trial mo ngayon!'
+                                  : '${sub.daysRemaining} araw na lang ang trial mo!',
+                              style: TextStyle(color: Colors.orange[800]),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pushNamed(
+                              context,
+                              '/subscription',
+                              arguments: false, // ← hindi pa expired, trial pa lang
+                            ),
+                            child: const Text('Mag-subscribe'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+
               // Total Utang Card
               totalUtangAsync.when(
                 data: (total) => _buildSummaryCard(
@@ -84,7 +133,8 @@ class DashboardScreen extends ConsumerWidget {
               customersAsync.when(
                 data: (customers) {
                   final sorted = [...customers]
-                    ..sort((a, b) => b.totalUtang.compareTo(a.totalUtang));
+                    ..sort(
+                            (a, b) => b.totalUtang.compareTo(a.totalUtang));
                   final top = sorted.take(5).toList();
 
                   if (top.isEmpty) {
@@ -110,7 +160,8 @@ class DashboardScreen extends ConsumerWidget {
                             backgroundColor: const Color(0xFF1E88E5),
                             child: Text(
                               customer.name[0].toUpperCase(),
-                              style: const TextStyle(color: Colors.white),
+                              style:
+                              const TextStyle(color: Colors.white),
                             ),
                           ),
                           title: Text(customer.name),
@@ -158,7 +209,8 @@ class DashboardScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title,
-                  style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                  style: const TextStyle(
+                      color: Colors.white70, fontSize: 13)),
               Text(value,
                   style: const TextStyle(
                       color: Colors.white,

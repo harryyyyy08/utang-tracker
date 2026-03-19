@@ -7,6 +7,7 @@ import 'presentation/splash/splash_screen.dart';
 import 'presentation/auth/login_screen.dart';
 import 'presentation/auth/register_screen.dart';
 import 'presentation/home/home_screen.dart';
+import 'presentation/subscription/subscription_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,6 +40,12 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/home': (context) => const HomeScreen(),
+        '/subscription': (context) {
+          // Kunin ang argument kung expired ba o hindi
+          final args = ModalRoute.of(context)?.settings.arguments;
+          final isExpired = args == true;
+          return SubscriptionScreen(isExpired: isExpired);
+        },
       },
     );
   }
