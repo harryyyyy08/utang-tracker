@@ -54,7 +54,8 @@ class _SplashScreenState extends State<SplashScreen> {
       // Walang expiry
       if (expiryStr == null) {
         Navigator.pushNamedAndRemoveUntil(
-            context, '/subscription', (route) => false);
+            context, '/subscription', (route) => false,
+            arguments: true);
         return;
       }
 
@@ -67,7 +68,8 @@ class _SplashScreenState extends State<SplashScreen> {
             context, '/home', (route) => false);
       } else {
         Navigator.pushNamedAndRemoveUntil(
-            context, '/subscription', (route) => false);
+            context, '/subscription', (route) => false,
+            arguments: true);
       }
     } catch (e) {
       if (mounted) {
