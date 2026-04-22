@@ -72,9 +72,21 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     );
   }
 
+  Future<void> _cancelReset() async {
+    await Supabase.instance.client.auth.signOut();
+    if (mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (!didPop) await _cancelReset();
+      },
+      child: Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -88,7 +100,19 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
               const Text('Ilagay ang iyong bagong password',
                   style: TextStyle(color: Colors.grey)),
-              const SizedBox(height: 40),
+              Align(
+                alignment: Alignment.topLeft,
+                child: TextButton.icon(
+                  onPressed: _isLoading ? null : _cancelReset,
+                  icon: const Icon(Icons.arrow_back),
+                  label: const Text('Bumalik sa Login'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.grey[700],
+                    padding: EdgeInsets.zero,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               TextField(
                 controller: _passwordController,
                 obscureText: _obscurePassword,
@@ -139,6 +163,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 }

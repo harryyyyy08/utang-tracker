@@ -10,6 +10,7 @@ import 'presentation/auth/register_screen.dart';
 import 'presentation/home/home_screen.dart';
 import 'presentation/subscription/subscription_screen.dart';
 import 'presentation/auth/reset_password_screen.dart';
+import 'providers/customer_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,14 +22,14 @@ void main() async {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  ConsumerState<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends ConsumerState<MyApp> {
   final _navigatorKey = GlobalKey<NavigatorState>();
   late final AppLinks _appLinks;
 
@@ -46,10 +47,18 @@ class _MyAppState extends State<MyApp> {
       if (data.event == AuthChangeEvent.passwordRecovery) {
         _navigatorKey.currentState?.pushNamedAndRemoveUntil(
             '/reset-password', (route) => false);
-      } else if (data.event == AuthChangeEvent.signedIn && _isHandlingDeepLink) {
-        _isHandlingDeepLink = false;
-        _navigatorKey.currentState?.pushNamedAndRemoveUntil(
-            '/', (route) => false);
+      } else if (data.event == AuthChangeEvent.signedIn) {
+        // Clear stale data from previous user before loading new user's data
+        ref.invalidate(customersProvider);
+        ref.invalidate(totalUtangProvider);
+        if (_isHandlingDeepLink) {
+          _isHandlingDeepLink = false;
+          _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+              '/', (route) => false);
+        }
+      } else if (data.event == AuthChangeEvent.signedOut) {
+        ref.invalidate(customersProvider);
+        ref.invalidate(totalUtangProvider);
       }
     });
   }
