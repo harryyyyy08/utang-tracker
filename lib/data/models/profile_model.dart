@@ -27,4 +27,12 @@ class ProfileModel {
           : null,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'store_name': storeName,
+      'owner_name': ownerName,
+      'phone': phone,
+    };
+  }
 }

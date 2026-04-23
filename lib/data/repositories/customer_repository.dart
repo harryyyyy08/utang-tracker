@@ -4,7 +4,6 @@ import '../models/customer_model.dart';
 class CustomerRepository {
   final _supabase = Supabase.instance.client;
 
-  // Kumuha ng lahat ng customers ng current user
   Future<List<CustomerModel>> getCustomers() async {
     final userId = _supabase.auth.currentUser!.id;
     final response = await _supabase
@@ -18,13 +17,13 @@ class CustomerRepository {
         .toList();
   }
 
-  // Magdagdag ng customer
   Future<CustomerModel> addCustomer({
     required String name,
     String? phone,
     String? address,
     String? notes,
     double interestRate = 0,
+    double? creditLimit,
   }) async {
     final userId = _supabase.auth.currentUser!.id;
     final response = await _supabase.from('customers').insert({
@@ -34,12 +33,12 @@ class CustomerRepository {
       'address': address,
       'notes': notes,
       'interest_rate': interestRate,
+      'credit_limit': creditLimit,
     }).select().single();
 
     return CustomerModel.fromJson(response);
   }
 
-  // Mag-delete ng customer
   Future<void> deleteCustomer(String customerId) async {
     await _supabase.from('customers').delete().eq('id', customerId);
   }
@@ -51,6 +50,7 @@ class CustomerRepository {
     String? address,
     String? notes,
     double interestRate = 0,
+    double? creditLimit,
   }) async {
     await _supabase.from('customers').update({
       'name': name,
@@ -58,6 +58,7 @@ class CustomerRepository {
       'address': address,
       'notes': notes,
       'interest_rate': interestRate,
+      'credit_limit': creditLimit,
     }).eq('id', customerId);
   }
 }

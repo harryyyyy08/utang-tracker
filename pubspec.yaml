@@ -50,6 +50,8 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   flutter_dotenv: ^5.1.0
+  fl_chart: ^0.70.2
+  share_plus: ^10.1.2
 
 dev_dependencies:
   flutter_test:

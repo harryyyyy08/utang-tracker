@@ -25,6 +25,7 @@ class TransactionRepository {
     double interestAmount = 0,
     String? description,
     required DateTime date,
+    DateTime? dueDate,
   }) async {
     final userId = _supabase.auth.currentUser!.id;
     final response = await _supabase.from('transactions').insert({
@@ -35,9 +36,39 @@ class TransactionRepository {
       'interest_amount': interestAmount,
       'description': description,
       'date': date.toIso8601String().split('T')[0],
+      'due_date': dueDate?.toIso8601String().split('T')[0],
     }).select().single();
 
     return TransactionModel.fromJson(response);
+  }
+
+  // Bilang ng overdue transactions ng isang customer
+  Future<int> getOverdueCount(String customerId) async {
+    final transactions = await getTransactions(customerId);
+    return transactions.where((t) => t.isOverdue).length;
+  }
+
+  // I-update ang isang transaction
+  Future<void> updateTransaction({
+    required String transactionId,
+    required double amount,
+    double interestAmount = 0,
+    String? description,
+    required DateTime date,
+    DateTime? dueDate,
+  }) async {
+    await _supabase.from('transactions').update({
+      'amount': amount,
+      'interest_amount': interestAmount,
+      'description': description,
+      'date': date.toIso8601String().split('T')[0],
+      'due_date': dueDate?.toIso8601String().split('T')[0],
+    }).eq('id', transactionId);
+  }
+
+  // I-delete ang isang transaction
+  Future<void> deleteTransaction(String transactionId) async {
+    await _supabase.from('transactions').delete().eq('id', transactionId);
   }
 
   // Kumuha ng total utang ng isang customer
@@ -52,6 +83,37 @@ class TransactionRepository {
       }
     }
     return total < 0 ? 0 : total;
+  }
+
+  // Kumuha ng monthly bayad totals (last 6 months)
+  Future<List<Map<String, dynamic>>> getMonthlyCollections() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return [];
+
+    final sixMonthsAgo = DateTime.now().subtract(const Duration(days: 180));
+    final response = await _supabase
+        .from('transactions')
+        .select('amount, date')
+        .eq('user_id', userId)
+        .eq('type', 'bayad')
+        .gte('date', sixMonthsAgo.toIso8601String().split('T')[0]);
+
+    final Map<String, double> totals = {};
+    for (final t in response as List) {
+      final date = DateTime.parse(t['date']);
+      final key = '${date.year}-${date.month.toString().padLeft(2, '0')}';
+      totals[key] = (totals[key] ?? 0) + (t['amount'] as num).toDouble();
+    }
+
+    // Fill in missing months with 0
+    final result = <Map<String, dynamic>>[];
+    for (int i = 5; i >= 0; i--) {
+      final d = DateTime(DateTime.now().year, DateTime.now().month - i, 1);
+      final key = '${d.year}-${d.month.toString().padLeft(2, '0')}';
+      result.add({'month': key, 'total': totals[key] ?? 0.0});
+    }
+
+    return result;
   }
 
   // Kumuha ng total utang ng lahat ng customers

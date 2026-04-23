@@ -5,10 +5,12 @@ class CustomerModel {
   final String? phone;
   final String? address;
   final String? notes;
-  final double interestRate; // ← bago
+  final double interestRate;
+  final double? creditLimit; // null = walang limit
   final DateTime createdAt;
   double totalUtang;
-  double totalInterest; // ← bago
+  double totalInterest;
+  int overdueCount; // bilang ng overdue transactions
 
   CustomerModel({
     required this.id,
@@ -18,9 +20,11 @@ class CustomerModel {
     this.address,
     this.notes,
     this.interestRate = 0,
+    this.creditLimit,
     required this.createdAt,
     this.totalUtang = 0,
     this.totalInterest = 0,
+    this.overdueCount = 0,
   });
 
   factory CustomerModel.fromJson(Map<String, dynamic> json) {
@@ -32,6 +36,7 @@ class CustomerModel {
       address: json['address'],
       notes: json['notes'],
       interestRate: (json['interest_rate'] as num?)?.toDouble() ?? 0,
+      creditLimit: (json['credit_limit'] as num?)?.toDouble(),
       createdAt: DateTime.parse(json['created_at']),
     );
   }

@@ -14,6 +14,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
   final _addressController = TextEditingController();
   final _notesController = TextEditingController();
   final _interestRateController = TextEditingController();
+  final _creditLimitController = TextEditingController();
   bool _isLoading = false;
   final _repo = CustomerRepository();
 
@@ -38,8 +39,10 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
         notes: _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
-        interestRate: double.tryParse(
-            _interestRateController.text) ?? 0,
+        interestRate: double.tryParse(_interestRateController.text) ?? 0,
+        creditLimit: _creditLimitController.text.trim().isEmpty
+            ? null
+            : double.tryParse(_creditLimitController.text),
       );
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -108,16 +111,26 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                 prefixIcon: Icon(Icons.percent),
               ),
             ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _creditLimitController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Credit Limit (₱) — optional',
+                hintText: 'Ex: 500 — max utang na pwede',
+                prefixIcon: Icon(Icons.credit_card),
+              ),
+            ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _isLoading ? null : _save,
               child: _isLoading
                   ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                    color: Colors.white, strokeWidth: 2),
-              )
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2),
+                    )
                   : const Text('I-save'),
             ),
           ],

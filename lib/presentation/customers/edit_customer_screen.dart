@@ -16,22 +16,40 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> {
   late TextEditingController _addressController;
   late TextEditingController _notesController;
   late TextEditingController _interestRateController;
+  late TextEditingController _creditLimitController;
   bool _isLoading = false;
   final _repo = CustomerRepository();
 
   @override
   void initState() {
     super.initState();
-    // Pre-fill ng existing data
     _nameController = TextEditingController(text: widget.customer.name);
     _phoneController = TextEditingController(text: widget.customer.phone ?? '');
-    _addressController = TextEditingController(text: widget.customer.address ?? '');
+    _addressController =
+        TextEditingController(text: widget.customer.address ?? '');
     _notesController = TextEditingController(text: widget.customer.notes ?? '');
     _interestRateController = TextEditingController(
       text: widget.customer.interestRate > 0
           ? widget.customer.interestRate.toString()
           : '',
     );
+    _creditLimitController = TextEditingController(
+      text: widget.customer.creditLimit != null
+          ? widget.customer.creditLimit!.toStringAsFixed(
+              widget.customer.creditLimit! % 1 == 0 ? 0 : 2)
+          : '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _notesController.dispose();
+    _interestRateController.dispose();
+    _creditLimitController.dispose();
+    super.dispose();
   }
 
   Future<void> _save() async {
@@ -48,13 +66,18 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> {
         customerId: widget.customer.id,
         name: _nameController.text.trim(),
         phone: _phoneController.text.trim().isEmpty
-            ? null : _phoneController.text.trim(),
+            ? null
+            : _phoneController.text.trim(),
         address: _addressController.text.trim().isEmpty
-            ? null : _addressController.text.trim(),
+            ? null
+            : _addressController.text.trim(),
         notes: _notesController.text.trim().isEmpty
-            ? null : _notesController.text.trim(),
-        interestRate: double.tryParse(
-            _interestRateController.text) ?? 0,
+            ? null
+            : _notesController.text.trim(),
+        interestRate: double.tryParse(_interestRateController.text) ?? 0,
+        creditLimit: _creditLimitController.text.trim().isEmpty
+            ? null
+            : double.tryParse(_creditLimitController.text),
       );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -123,16 +146,26 @@ class _EditCustomerScreenState extends State<EditCustomerScreen> {
                 prefixIcon: Icon(Icons.percent),
               ),
             ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _creditLimitController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Credit Limit (₱) — optional',
+                hintText: 'Ex: 500 — max utang na pwede',
+                prefixIcon: Icon(Icons.credit_card),
+              ),
+            ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _isLoading ? null : _save,
               child: _isLoading
                   ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                    color: Colors.white, strokeWidth: 2),
-              )
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2),
+                    )
                   : const Text('I-save ang Changes'),
             ),
           ],
