@@ -32,17 +32,43 @@ class _SplashScreenState extends State<SplashScreen> {
     try {
       final userId = Supabase.instance.client.auth.currentUser!.id;
 
-      // Force fresh data — hindi galing sa cache
+      // Use select() without explicit columns so it works even if the
+      // role column hasn't been added to the database yet.
       final response = await Supabase.instance.client
           .from('profiles')
-          .select('subscription_status, subscription_expiry')
+          .select()
           .eq('id', userId)
-          .single();
+          .maybeSingle();
+
+      if (!mounted) return;
+
+      if (response == null) {
+        // Profile row doesn't exist yet — sign out and show error.
+        await Supabase.instance.client.auth.signOut();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Hindi mahanap ang iyong profile. Subukan ulit.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          Navigator.pushNamedAndRemoveUntil(
+              context, '/login', (route) => false);
+        }
+        return;
+      }
+
+      final role = response['role'] as String? ?? 'user';
+
+      // Admin — go to admin dashboard
+      if (role == 'admin') {
+        Navigator.pushNamedAndRemoveUntil(
+            context, '/admin', (route) => false);
+        return;
+      }
 
       final status = response['subscription_status'] as String;
       final expiryStr = response['subscription_expiry'] as String?;
-
-      if (!mounted) return;
 
       // Active subscriber — tuloy sa home
       if (status == 'active') {

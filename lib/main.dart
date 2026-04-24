@@ -10,6 +10,7 @@ import 'presentation/auth/register_screen.dart';
 import 'presentation/home/home_screen.dart';
 import 'presentation/subscription/subscription_screen.dart';
 import 'presentation/auth/reset_password_screen.dart';
+import 'presentation/admin/admin_home_screen.dart';
 import 'providers/customer_provider.dart';
 
 void main() async {
@@ -112,6 +113,7 @@ class _MyAppState extends ConsumerState<MyApp> {
           final isExpired = args == true;
           return SubscriptionScreen(isExpired: isExpired);
         },
+        '/admin': (context) => const AdminHomeScreen(),
       },
     );
   }

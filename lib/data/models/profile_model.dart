@@ -5,6 +5,7 @@ class ProfileModel {
   final String? phone;
   final String subscriptionStatus;
   final DateTime? subscriptionExpiry;
+  final String role;
 
   ProfileModel({
     required this.id,
@@ -13,6 +14,7 @@ class ProfileModel {
     this.phone,
     this.subscriptionStatus = 'trial',
     this.subscriptionExpiry,
+    this.role = 'user',
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
@@ -25,6 +27,7 @@ class ProfileModel {
       subscriptionExpiry: json['subscription_expiry'] != null
           ? DateTime.parse(json['subscription_expiry'])
           : null,
+      role: json['role'] ?? 'user',
     );
   }
 
