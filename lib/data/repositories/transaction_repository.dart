@@ -10,7 +10,8 @@ class TransactionRepository {
         .from('transactions')
         .select()
         .eq('customer_id', customerId)
-        .order('date', ascending: false);
+        .order('date', ascending: false)
+        .order('created_at', ascending: false);
 
     return (response as List)
         .map((json) => TransactionModel.fromJson(json))
@@ -68,7 +69,12 @@ class TransactionRepository {
 
   // I-delete ang isang transaction
   Future<void> deleteTransaction(String transactionId) async {
-    await _supabase.from('transactions').delete().eq('id', transactionId);
+    final userId = _supabase.auth.currentUser!.id;
+    await _supabase
+        .from('transactions')
+        .delete()
+        .eq('id', transactionId)
+        .eq('user_id', userId);
   }
 
   // Kumuha ng total utang ng isang customer

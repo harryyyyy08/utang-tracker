@@ -251,7 +251,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                           ),
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.fromLTRB(12, 12, 12, 148),
                           itemCount: _transactions.length,
                           itemBuilder: (context, index) {
                             final t = _transactions[index];
@@ -380,9 +380,9 @@ class _TransactionCard extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onLongPress: onLongPress,
-        borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(

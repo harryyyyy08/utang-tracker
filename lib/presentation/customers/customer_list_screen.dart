@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/customer_provider.dart';
 import '../../data/repositories/customer_repository.dart';
 import 'customer_detail_screen.dart';
@@ -15,6 +16,25 @@ class CustomerListScreen extends ConsumerStatefulWidget {
 
 class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
   final _searchCtrl = TextEditingController();
+  bool _showSwipeHint = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHintState();
+  }
+
+  Future<void> _loadHintState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final dismissed = prefs.getBool('swipe_hint_dismissed') ?? false;
+    if (mounted) setState(() => _showSwipeHint = !dismissed);
+  }
+
+  Future<void> _dismissHint() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('swipe_hint_dismissed', true);
+    if (mounted) setState(() => _showSwipeHint = false);
+  }
 
   @override
   void dispose() {
@@ -156,9 +176,45 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
             onRefresh: () async => ref.invalidate(customersProvider),
             child: ListView.builder(
               padding: const EdgeInsets.all(12),
-              itemCount: customers.length,
+              itemCount: customers.length + (_showSwipeHint ? 1 : 0),
               itemBuilder: (context, index) {
-                final customer = customers[index];
+                // Swipe hint card as first item
+                if (_showSwipeHint && index == 0) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE3F2FD),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF90CAF9)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.swipe_left,
+                            color: Color(0xFF1E88E5), size: 22),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'I-swipe pakaliwa ang customer para mag-delete',
+                            style: TextStyle(
+                              color: Color(0xFF1565C0),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: _dismissHint,
+                          child: const Icon(Icons.close,
+                              color: Color(0xFF1E88E5), size: 18),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final customer =
+                    customers[index - (_showSwipeHint ? 1 : 0)];
 
                 return Dismissible(
                   key: Key(customer.id),
@@ -190,6 +246,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                   onDismissed: (direction) async {
                     await CustomerRepository().deleteCustomer(customer.id);
                     ref.invalidate(customersProvider);
+                    if (_showSwipeHint) _dismissHint();
                   },
                   background: Container(
                     alignment: Alignment.centerRight,
