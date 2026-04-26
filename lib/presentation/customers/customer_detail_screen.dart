@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../core/pdf/statement_pdf_generator.dart';
 import '../../data/models/customer_model.dart';
 import '../../data/models/transaction_model.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/connectivity_provider.dart';
 import 'add_transaction_screen.dart';
 import 'edit_customer_screen.dart';
 import 'edit_transaction_screen.dart';
@@ -90,6 +94,109 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
 
     Share.share(buffer.toString(),
         subject: 'Balanse ni ${widget.customer.name}');
+  }
+
+  Future<void> _sendSmsReminder() async {
+    final profile = ref.read(profileProvider).value;
+    final storeName = profile?.storeName ?? 'Ang Aming Tindahan';
+    final rawPhone = widget.customer.phone ?? '';
+
+    if (rawPhone.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Walang phone number itong customer. I-edit muna para magdagdag.'),
+          backgroundColor: Colors.orange,
+          action: SnackBarAction(
+            label: 'I-edit',
+            textColor: Colors.white,
+            onPressed: () async {
+              final updated = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => EditCustomerScreen(customer: widget.customer),
+                ),
+              );
+              if (updated == true) _loadData();
+            },
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Normalize Philippine phone number to E.164 format (+639XXXXXXXXX)
+    String phone = rawPhone.replaceAll(RegExp(r'[\s\-().]+'), '');
+    if (phone.startsWith('09')) {
+      phone = '+63${phone.substring(1)}';
+    } else if (phone.startsWith('9') && phone.length == 10) {
+      phone = '+63$phone';
+    } else if (phone.startsWith('63')) {
+      phone = '+$phone';
+    }
+
+    final message =
+        'Kumusta ${widget.customer.name}! '
+        'Mayroon kang utang sa $storeName na kabuuang '
+        '₱${_formatter.format(_totalUtang)}. '
+        'Pakibayad na po kapag may pagkakataon. Salamat! '
+        '— $storeName';
+
+    final uri = Uri(
+      scheme: 'sms',
+      path: phone,
+      queryParameters: {'body': message},
+    );
+
+    if (!await canLaunchUrl(uri)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Hindi ma-open ang SMS app.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+    await launchUrl(uri);
+  }
+
+  Future<void> _generateAndSharePdf() async {
+    final profile = ref.read(profileProvider).value;
+    if (profile == null) return;
+
+    final overlay = OverlayEntry(
+      builder: (_) => const ColoredBox(
+        color: Color(0x55000000),
+        child: Center(child: CircularProgressIndicator(color: Colors.white)),
+      ),
+    );
+    Overlay.of(context).insert(overlay);
+
+    try {
+      final pdfBytes = await StatementPdfGenerator.generate(
+        store: profile,
+        customer: widget.customer,
+        transactions: _transactions,
+      );
+      final storeName = (profile.storeName ?? 'Store').replaceAll(' ', '_');
+      final custName = widget.customer.name.replaceAll(' ', '_');
+      await Printing.sharePdf(
+        bytes: pdfBytes,
+        filename: '${storeName}_${custName}_SOA.pdf',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Hindi ma-generate ang PDF. Subukan ulit.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      overlay.remove();
+    }
   }
 
   void _showTransactionOptions(TransactionModel t) {
@@ -177,6 +284,8 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isOnline = ref.watch(isOnlineProvider).value ?? true;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.customer.name),
@@ -184,22 +293,35 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            tooltip: 'I-generate ang PDF Statement',
+            onPressed: _isLoading ? null : _generateAndSharePdf,
+          ),
+          IconButton(
+            icon: const Icon(Icons.sms_outlined),
+            tooltip: 'Mag-remind via SMS',
+            onPressed: _isLoading ? null : _sendSmsReminder,
+          ),
+          IconButton(
             icon: const Icon(Icons.share),
             tooltip: 'I-share ang balanse',
             onPressed: _isLoading ? null : _shareBalance,
           ),
           IconButton(
             icon: const Icon(Icons.edit),
-            onPressed: () async {
-              final updated = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      EditCustomerScreen(customer: widget.customer),
-                ),
-              );
-              if (updated == true) _loadData();
-            },
+            tooltip: isOnline ? 'I-edit' : 'Kailangan ng internet para dito',
+            onPressed: isOnline
+                ? () async {
+                    final updated = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            EditCustomerScreen(customer: widget.customer),
+                      ),
+                    );
+                    if (updated == true) _loadData();
+                  }
+                : null,
           ),
         ],
       ),
@@ -259,7 +381,9 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                               transaction: t,
                               formatter: _formatter,
                               dateFormat: _dateFormat,
-                              onLongPress: () => _showTransactionOptions(t),
+                              onLongPress: isOnline
+                                  ? () => _showTransactionOptions(t)
+                                  : null,
                             );
                           },
                         ),
@@ -271,38 +395,44 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
         children: [
           FloatingActionButton.extended(
             heroTag: 'utang',
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => AddTransactionScreen(
-                    customer: widget.customer,
-                    initialType: 'utang',
-                  ),
-                ),
-              );
-              _loadData();
-            },
-            backgroundColor: const Color(0xFFE53935),
+            onPressed: isOnline
+                ? () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AddTransactionScreen(
+                          customer: widget.customer,
+                          initialType: 'utang',
+                        ),
+                      ),
+                    );
+                    _loadData();
+                  }
+                : null,
+            backgroundColor:
+                isOnline ? const Color(0xFFE53935) : Colors.grey,
             icon: const Icon(Icons.add, color: Colors.white),
             label: const Text('Utang', style: TextStyle(color: Colors.white)),
           ),
           const SizedBox(height: 8),
           FloatingActionButton.extended(
             heroTag: 'bayad',
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => AddTransactionScreen(
-                    customer: widget.customer,
-                    initialType: 'bayad',
-                  ),
-                ),
-              );
-              _loadData();
-            },
-            backgroundColor: const Color(0xFF43A047),
+            onPressed: isOnline
+                ? () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AddTransactionScreen(
+                          customer: widget.customer,
+                          initialType: 'bayad',
+                        ),
+                      ),
+                    );
+                    _loadData();
+                  }
+                : null,
+            backgroundColor:
+                isOnline ? const Color(0xFF43A047) : Colors.grey,
             icon: const Icon(Icons.check, color: Colors.white),
             label: const Text('Bayad', style: TextStyle(color: Colors.white)),
           ),
@@ -362,7 +492,7 @@ class _TransactionCard extends StatelessWidget {
   final TransactionModel transaction;
   final NumberFormat formatter;
   final DateFormat dateFormat;
-  final VoidCallback onLongPress;
+  final VoidCallback? onLongPress;
 
   const _TransactionCard({
     required this.transaction,

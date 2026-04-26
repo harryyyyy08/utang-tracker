@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/utils/error_utils.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -45,6 +46,8 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         _showError(e.message);
       }
+    } catch (e) {
+      _showError(friendlyError(e));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

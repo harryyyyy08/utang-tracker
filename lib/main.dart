@@ -12,6 +12,7 @@ import 'presentation/subscription/subscription_screen.dart';
 import 'presentation/auth/reset_password_screen.dart';
 import 'presentation/admin/admin_home_screen.dart';
 import 'providers/customer_provider.dart';
+import 'core/cache/hive_cache_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,6 +21,7 @@ void main() async {
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
+  await HiveCacheService.instance.init();
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -60,6 +62,7 @@ class _MyAppState extends ConsumerState<MyApp> {
       } else if (data.event == AuthChangeEvent.signedOut) {
         ref.invalidate(customersProvider);
         ref.invalidate(totalUtangProvider);
+        HiveCacheService.instance.clearAll();
       }
     });
   }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/customer_provider.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../data/repositories/customer_repository.dart';
 import 'customer_detail_screen.dart';
 import 'add_customer_screen.dart';
@@ -46,6 +47,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
   Widget build(BuildContext context) {
     final filteredAsync = ref.watch(filteredCustomersProvider);
     final currentFilter = ref.watch(customerFilterProvider);
+    final isOnline = ref.watch(isOnlineProvider).value ?? true;
     final formatter = NumberFormat('#,##0.00', 'en_PH');
 
     return Scaffold(
@@ -130,14 +132,20 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const AddCustomerScreen()));
-          ref.invalidate(customersProvider);
-        },
-        backgroundColor: const Color(0xFF1E88E5),
-        child: const Icon(Icons.add, color: Colors.white),
+      floatingActionButton: Tooltip(
+        message: isOnline ? '' : 'Kailangan ng internet para dito',
+        child: FloatingActionButton(
+          onPressed: isOnline
+              ? () async {
+                  await Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const AddCustomerScreen()));
+                  ref.invalidate(customersProvider);
+                }
+              : null,
+          backgroundColor:
+              isOnline ? const Color(0xFF1E88E5) : Colors.grey,
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
       ),
       body: filteredAsync.when(
         data: (customers) {
@@ -218,7 +226,9 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
 
                 return Dismissible(
                   key: Key(customer.id),
-                  direction: DismissDirection.endToStart,
+                  direction: isOnline
+                      ? DismissDirection.endToStart
+                      : DismissDirection.none,
                   confirmDismiss: (direction) async {
                     return await showDialog<bool>(
                       context: context,

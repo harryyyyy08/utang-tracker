@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/cache/hive_cache_service.dart';
+import '../../core/connectivity/connectivity_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -23,84 +25,85 @@ class _SplashScreenState extends State<SplashScreen> {
     if (session != null) {
       await _checkSubscription();
     } else {
-      Navigator.pushNamedAndRemoveUntil(
-          context, '/login', (route) => false);
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     }
   }
 
   Future<void> _checkSubscription() async {
-    try {
-      final userId = Supabase.instance.client.auth.currentUser!.id;
+    final userId = Supabase.instance.client.auth.currentUser!.id;
+    final isOnline = await ConnectivityService.instance.isOnline();
 
-      // Use select() without explicit columns so it works even if the
-      // role column hasn't been added to the database yet.
-      final response = await Supabase.instance.client
-          .from('profiles')
-          .select()
-          .eq('id', userId)
-          .maybeSingle();
+    Map<String, dynamic>? profile;
 
-      if (!mounted) return;
+    if (isOnline) {
+      try {
+        profile = await Supabase.instance.client
+            .from('profiles')
+            .select()
+            .eq('id', userId)
+            .maybeSingle();
 
-      if (response == null) {
-        // Profile row doesn't exist yet — sign out and show error.
-        await Supabase.instance.client.auth.signOut();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Hindi mahanap ang iyong profile. Subukan ulit.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          Navigator.pushNamedAndRemoveUntil(
-              context, '/login', (route) => false);
+        if (profile != null) {
+          HiveCacheService.instance.saveProfileCache(userId, profile);
         }
-        return;
+      } catch (_) {
+        // Network error even though "online" — fall back to cache
+        profile = HiveCacheService.instance.loadProfileCache(userId);
       }
+    } else {
+      profile = HiveCacheService.instance.loadProfileCache(userId);
+    }
 
-      final role = response['role'] as String? ?? 'user';
+    if (!mounted) return;
 
-      // Admin — go to admin dashboard
-      if (role == 'admin') {
-        Navigator.pushNamedAndRemoveUntil(
-            context, '/admin', (route) => false);
-        return;
+    if (profile == null) {
+      if (isOnline) {
+        // Profile doesn't exist — sign out
+        await Supabase.instance.client.auth.signOut();
       }
+      // No profile and no cache (or just offline with no prior data)
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      return;
+    }
 
-      final status = response['subscription_status'] as String;
-      final expiryStr = response['subscription_expiry'] as String?;
+    final role = profile['role'] as String? ?? 'user';
 
-      // Active subscriber — tuloy sa home
-      if (status == 'active') {
-        Navigator.pushNamedAndRemoveUntil(
-            context, '/home', (route) => false);
-        return;
-      }
+    if (role == 'admin') {
+      Navigator.pushNamedAndRemoveUntil(context, '/admin', (route) => false);
+      return;
+    }
 
-      // Walang expiry
-      if (expiryStr == null) {
-        Navigator.pushNamedAndRemoveUntil(
-            context, '/subscription', (route) => false,
-            arguments: true);
-        return;
-      }
+    final status = profile['subscription_status'] as String? ?? 'trial';
+    final expiryStr = profile['subscription_expiry'] as String?;
 
-      // UTC comparison
-      final expiry = DateTime.parse(expiryStr).toUtc();
-      final now = DateTime.now().toUtc();
+    if (status == 'active') {
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      return;
+    }
 
-      if (now.isBefore(expiry)) {
-        Navigator.pushNamedAndRemoveUntil(
-            context, '/home', (route) => false);
+    if (expiryStr == null) {
+      // Walang expiry — only block if we're online (cached data may be stale)
+      if (isOnline) {
+        Navigator.pushNamedAndRemoveUntil(context, '/subscription',
+            (route) => false, arguments: true);
       } else {
-        Navigator.pushNamedAndRemoveUntil(
-            context, '/subscription', (route) => false,
-            arguments: true);
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
       }
-    } catch (e) {
-      if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(
-            context, '/login', (route) => false);
+      return;
+    }
+
+    final expiry = DateTime.parse(expiryStr).toUtc();
+    final now = DateTime.now().toUtc();
+
+    if (now.isBefore(expiry)) {
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+    } else {
+      // Expired — only redirect to subscription screen when online
+      if (isOnline) {
+        Navigator.pushNamedAndRemoveUntil(context, '/subscription',
+            (route) => false, arguments: true);
+      } else {
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
       }
     }
   }
@@ -124,7 +127,7 @@ class _SplashScreenState extends State<SplashScreen> {
             Text('Para sa iyong tindahan',
                 style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.8))),
+                    color: Colors.white.withValues(alpha: 0.8))),
             const SizedBox(height: 40),
             const CircularProgressIndicator(color: Colors.white),
           ],

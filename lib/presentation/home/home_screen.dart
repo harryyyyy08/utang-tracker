@@ -6,6 +6,8 @@ import '../customers/customer_list_screen.dart';
 import '../settings/settings_screen.dart';
 import '../../providers/customer_provider.dart';
 import '../../providers/subscription_provider.dart';
+import '../../providers/connectivity_provider.dart';
+import '../../core/widgets/offline_banner.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -93,8 +95,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isOnline = ref.watch(isOnlineProvider).value ?? true;
+
     return Scaffold(
-      body: _screens[_currentIndex],
+      body: Column(
+        children: [
+          ClipRect(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              height: isOnline ? 0.0 : 30.0,
+              child: const OfflineBanner(),
+            ),
+          ),
+          Expanded(child: _screens[_currentIndex]),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {

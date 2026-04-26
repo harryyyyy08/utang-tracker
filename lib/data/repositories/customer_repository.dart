@@ -1,20 +1,30 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/customer_model.dart';
+import '../../core/cache/hive_cache_service.dart';
+import '../../core/connectivity/connectivity_service.dart';
 
 class CustomerRepository {
   final _supabase = Supabase.instance.client;
 
   Future<List<CustomerModel>> getCustomers() async {
     final userId = _supabase.auth.currentUser!.id;
-    final response = await _supabase
-        .from('customers')
-        .select()
-        .eq('user_id', userId)
-        .order('name');
+    final isOnline = await ConnectivityService.instance.isOnline();
 
-    return (response as List)
-        .map((json) => CustomerModel.fromJson(json))
-        .toList();
+    if (isOnline) {
+      final response = await _supabase
+          .from('customers')
+          .select()
+          .eq('user_id', userId)
+          .order('name');
+      HiveCacheService.instance.saveCustomers(userId, response as List);
+      return (response).map((json) => CustomerModel.fromJson(json)).toList();
+    } else {
+      final cached = HiveCacheService.instance.loadCustomers(userId);
+      if (cached != null) {
+        return cached.map((json) => CustomerModel.fromJson(json)).toList();
+      }
+      throw Exception('Offline at walang naka-save na data.');
+    }
   }
 
   Future<CustomerModel> addCustomer({
