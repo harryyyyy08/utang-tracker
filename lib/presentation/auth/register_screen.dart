@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -15,10 +16,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _storeNameController = TextEditingController();
   final _ownerNameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _referralCodeController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _isRegistered = false; // ← bago
+  bool _isRegistered = false;
+  bool? _referralCodeValid; // null = empty, true = valid, false = invalid
+  bool _isCheckingCode = false;
+  Timer? _debounce;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _referralCodeController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _storeNameController.dispose();
+    _ownerNameController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  void _onReferralCodeChanged(String value) {
+    _debounce?.cancel();
+    final code = value.trim().toUpperCase();
+    if (code.isEmpty) {
+      setState(() { _referralCodeValid = null; _isCheckingCode = false; });
+      return;
+    }
+    setState(() => _isCheckingCode = true);
+    _debounce = Timer(const Duration(milliseconds: 600), () async {
+      try {
+        final result = await Supabase.instance.client
+            .rpc('validate_referral_code', params: {'code': code});
+        if (mounted) setState(() { _referralCodeValid = result == true; _isCheckingCode = false; });
+      } catch (_) {
+        if (mounted) setState(() { _referralCodeValid = null; _isCheckingCode = false; });
+      }
+    });
+  }
 
   Future<void> _register() async {
     if (_emailController.text.isEmpty ||
@@ -50,6 +87,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'store_name': _storeNameController.text.trim(),
           'owner_name': _ownerNameController.text.trim(),
           'phone': _phoneController.text.trim(),
+          'referral_code': _referralCodeController.text.trim().toUpperCase(),
         },
       );
 
@@ -269,6 +307,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     _obscureConfirmPassword =
                     !_obscureConfirmPassword),
                   ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _referralCodeController,
+                textCapitalization: TextCapitalization.characters,
+                onChanged: _onReferralCodeChanged,
+                decoration: InputDecoration(
+                  labelText: 'Referral Code (opsyonal)',
+                  prefixIcon: const Icon(Icons.card_giftcard_outlined),
+                  helperText: 'Kung may nagbigay sa iyo ng code, ilagay ito dito.',
+                  suffixIcon: _isCheckingCode
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : _referralCodeValid == true
+                          ? const Icon(Icons.check_circle, color: Colors.green)
+                          : _referralCodeValid == false
+                              ? const Icon(Icons.cancel, color: Colors.red)
+                              : null,
                 ),
               ),
               const SizedBox(height: 24),

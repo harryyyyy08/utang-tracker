@@ -15,11 +15,54 @@ class AdminRepository {
   }
 
   Future<void> activateSubscription(String userId) async {
-    final expiry = DateTime.now().toUtc().add(const Duration(days: 30));
+    final data = await _client
+        .from('profiles')
+        .select('referred_by, referral_reward_paid')
+        .eq('id', userId)
+        .single();
+
+    final referrerId = data['referred_by'] as String?;
+    final rewardPaid = data['referral_reward_paid'] as bool? ?? false;
+    final hasUnpaidReferral = referrerId != null && !rewardPaid;
+
+    final now = DateTime.now().toUtc();
+    // Referred user (first subscription): 60 days. Normal: 30 days.
+    final expiry = hasUnpaidReferral
+        ? DateTime(now.year, now.month + 2, now.day,
+                now.hour, now.minute, now.second)
+            .toUtc()
+        : now.add(const Duration(days: 30));
+
     await _client.from('profiles').update({
       'subscription_status': 'active',
       'subscription_expiry': expiry.toIso8601String(),
+      if (hasUnpaidReferral) 'referral_reward_paid': true,
     }).eq('id', userId);
+
+    if (hasUnpaidReferral) {
+      final ref = await _client
+          .from('profiles')
+          .select('subscription_expiry, subscription_status')
+          .eq('id', referrerId!)
+          .single();
+
+      final refStatus = ref['subscription_status'] as String;
+      final refExpiryStr = ref['subscription_expiry'] as String?;
+      final refBase =
+          (refExpiryStr != null &&
+                  DateTime.parse(refExpiryStr).toUtc().isAfter(now))
+              ? DateTime.parse(refExpiryStr).toUtc()
+              : now;
+      final refNewExpiry = DateTime(refBase.year, refBase.month + 1,
+              refBase.day, refBase.hour, refBase.minute, refBase.second)
+          .toUtc();
+
+      await _client.from('profiles').update({
+        'subscription_status':
+            refStatus == 'expired' ? 'trial' : refStatus,
+        'subscription_expiry': refNewExpiry.toIso8601String(),
+      }).eq('id', referrerId);
+    }
   }
 
   Future<void> extendSubscription(String userId, int months) async {

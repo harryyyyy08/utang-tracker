@@ -81,10 +81,16 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
   String get _displayName => _user.storeName ?? _user.ownerName ?? 'user';
 
   Future<void> _onActivate() async {
+    final hasUnpaidReferral =
+        _user.referredBy != null && !_user.referralRewardPaid;
     final ok = await _confirm(
       title: 'I-activate ang Subscription?',
-      message:
-          'Magiging active si $_displayName ng 30 araw mula ngayon.',
+      message: hasUnpaidReferral
+          ? 'Si $_displayName ay may referral reward na hindi pa nabibigay.\n\n'
+              '• Siya ay makakakuha ng 60 araw (2 buwan) na subscription.\n'
+              '• Ang nag-refer sa kanya ay makakakuha ng +1 libreng buwan.\n\n'
+              'Awtomatiko itong malalapat.'
+          : 'Magiging active si $_displayName ng 30 araw mula ngayon.',
       confirmLabel: 'I-activate',
       confirmColor: Colors.green,
     );
@@ -241,6 +247,51 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
                           Text(expiryText,
                               style: const TextStyle(
                                   fontSize: 12, color: Colors.grey)),
+                          if (_user.referredBy != null) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: _user.referralRewardPaid
+                                    ? Colors.grey[100]
+                                    : const Color(0xFFE8F5E9),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: _user.referralRewardPaid
+                                      ? Colors.grey[300]!
+                                      : Colors.green,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _user.referralRewardPaid
+                                        ? Icons.card_giftcard
+                                        : Icons.card_giftcard_outlined,
+                                    size: 14,
+                                    color: _user.referralRewardPaid
+                                        ? Colors.grey
+                                        : Colors.green,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _user.referralRewardPaid
+                                        ? 'Referral reward: Nabayaran na ✓'
+                                        : 'Referral reward: Pending (sa first subscription)',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: _user.referralRewardPaid
+                                          ? Colors.grey
+                                          : Colors.green[700],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
