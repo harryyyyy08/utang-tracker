@@ -35,6 +35,7 @@ class TransactionRepository {
     String? description,
     required DateTime date,
     DateTime? dueDate,
+    String? paymentMethod,
   }) async {
     final userId = _supabase.auth.currentUser!.id;
     final response = await _supabase.from('transactions').insert({
@@ -46,6 +47,7 @@ class TransactionRepository {
       'description': description,
       'date': date.toIso8601String().split('T')[0],
       'due_date': dueDate?.toIso8601String().split('T')[0],
+      if (paymentMethod != null) 'payment_method': paymentMethod,
     }).select().single();
 
     return TransactionModel.fromJson(response);
@@ -63,6 +65,7 @@ class TransactionRepository {
     String? description,
     required DateTime date,
     DateTime? dueDate,
+    String? paymentMethod,
   }) async {
     await _supabase.from('transactions').update({
       'amount': amount,
@@ -70,6 +73,7 @@ class TransactionRepository {
       'description': description,
       'date': date.toIso8601String().split('T')[0],
       'due_date': dueDate?.toIso8601String().split('T')[0],
+      'payment_method': paymentMethod,
     }).eq('id', transactionId);
   }
 

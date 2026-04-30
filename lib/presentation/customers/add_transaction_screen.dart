@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/customer_model.dart';
+import '../../data/models/transaction_model.dart';
 import '../../data/repositories/transaction_repository.dart';
 
 class AddTransactionScreen extends StatefulWidget {
@@ -23,6 +24,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   late String _selectedType;
   DateTime _selectedDate = DateTime.now();
   DateTime? _dueDate;
+  String? _selectedPaymentMethod;
   bool _isLoading = false;
   double _currentUtang = 0;
   double _computedInterest = 0;
@@ -159,6 +161,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             : _descriptionController.text.trim(),
         date: _selectedDate,
         dueDate: _selectedType == 'utang' ? _dueDate : null,
+        paymentMethod:
+            _selectedType == 'bayad' ? _selectedPaymentMethod : null,
       );
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -296,6 +300,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           onTap: () => setState(() {
                             _selectedType = 'utang';
                             _dueDate = null;
+                            _selectedPaymentMethod = null;
                           }),
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 12),
@@ -428,6 +433,44 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
+
+                  // Mode of Payment (bayad only)
+                  if (!isUtang) ...[
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Mode of Payment (opsyonal)',
+                        style: TextStyle(
+                            fontSize: 13, color: Colors.grey[600]),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: TransactionModel.paymentMethods
+                          .map((entry) => ChoiceChip(
+                                label: Text(entry.$2,
+                                    style: const TextStyle(fontSize: 13)),
+                                selected:
+                                    _selectedPaymentMethod == entry.$1,
+                                selectedColor: const Color(0xFF43A047),
+                                labelStyle: TextStyle(
+                                  color: _selectedPaymentMethod == entry.$1
+                                      ? Colors.white
+                                      : null,
+                                ),
+                                onSelected: isBayadDisabled
+                                    ? null
+                                    : (selected) => setState(() {
+                                          _selectedPaymentMethod =
+                                              selected ? entry.$1 : null;
+                                        }),
+                              ))
+                          .toList(),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
 
                   // Transaction Date
                   ListTile(

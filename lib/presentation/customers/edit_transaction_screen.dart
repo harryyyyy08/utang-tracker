@@ -23,6 +23,7 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
   late final TextEditingController _descriptionController;
   late DateTime _selectedDate;
   DateTime? _dueDate;
+  String? _selectedPaymentMethod;
   bool _isLoading = false;
   double _computedInterest = 0;
   final _repo = TransactionRepository();
@@ -40,6 +41,7 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
         TextEditingController(text: widget.transaction.description ?? '');
     _selectedDate = widget.transaction.date;
     _dueDate = widget.transaction.dueDate;
+    _selectedPaymentMethod = widget.transaction.paymentMethod;
     _computedInterest = widget.transaction.interestAmount;
     _amountController.addListener(_computeInterest);
   }
@@ -104,6 +106,7 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
             : _descriptionController.text.trim(),
         date: _selectedDate,
         dueDate: _isUtang ? _dueDate : null,
+        paymentMethod: _isUtang ? null : _selectedPaymentMethod,
       );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -234,6 +237,40 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
               ),
             ),
             const SizedBox(height: 16),
+
+            // Mode of Payment (bayad only)
+            if (!_isUtang) ...[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Mode of Payment (opsyonal)',
+                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: TransactionModel.paymentMethods
+                    .map((entry) => ChoiceChip(
+                          label: Text(entry.$2,
+                              style: const TextStyle(fontSize: 13)),
+                          selected: _selectedPaymentMethod == entry.$1,
+                          selectedColor: const Color(0xFF43A047),
+                          labelStyle: TextStyle(
+                            color: _selectedPaymentMethod == entry.$1
+                                ? Colors.white
+                                : null,
+                          ),
+                          onSelected: (selected) => setState(() {
+                            _selectedPaymentMethod =
+                                selected ? entry.$1 : null;
+                          }),
+                        ))
+                    .toList(),
+              ),
+              const SizedBox(height: 16),
+            ],
 
             // Transaction Date
             ListTile(

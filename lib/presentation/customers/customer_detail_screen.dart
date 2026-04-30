@@ -597,6 +597,27 @@ class _TransactionCard extends StatelessWidget {
                           fontSize: 12, color: Colors.grey),
                     ),
 
+                    // Payment method badge (bayad only)
+                    if (!isUtang && t.paymentMethod != null) ...[
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey[300]!),
+                        ),
+                        child: Text(
+                          TransactionModel.paymentMethodLabel(
+                                  t.paymentMethod) ??
+                              t.paymentMethod!,
+                          style: const TextStyle(
+                              fontSize: 11, color: Colors.black87),
+                        ),
+                      ),
+                    ],
+
                     // Due date
                     if (t.dueDate != null) ...[
                       const SizedBox(height: 2),

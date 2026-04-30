@@ -9,6 +9,7 @@ class TransactionModel {
   final DateTime date;
   final DateTime? dueDate;
   final DateTime createdAt;
+  final String? paymentMethod;
 
   TransactionModel({
     required this.id,
@@ -21,6 +22,7 @@ class TransactionModel {
     required this.date,
     this.dueDate,
     required this.createdAt,
+    this.paymentMethod,
   });
 
   double get totalWithInterest => amount + interestAmount;
@@ -29,6 +31,22 @@ class TransactionModel {
       type == 'utang' &&
       dueDate != null &&
       dueDate!.isBefore(DateTime.now());
+
+  static const paymentMethods = [
+    ('cash', '💵 Cash'),
+    ('gcash', '📱 GCash'),
+    ('paymaya', '📲 PayMaya'),
+    ('bank_transfer', '🏦 Bank Transfer'),
+    ('others', '• Iba pa'),
+  ];
+
+  static String? paymentMethodLabel(String? value) {
+    if (value == null) return null;
+    for (final entry in paymentMethods) {
+      if (entry.$1 == value) return entry.$2;
+    }
+    return value;
+  }
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
     return TransactionModel(
@@ -44,6 +62,7 @@ class TransactionModel {
           ? DateTime.parse(json['due_date'])
           : null,
       createdAt: DateTime.parse(json['created_at']),
+      paymentMethod: json['payment_method'],
     );
   }
 }
