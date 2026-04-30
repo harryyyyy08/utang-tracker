@@ -25,7 +25,7 @@ class _SplashScreenState extends State<SplashScreen> {
     if (session != null) {
       await _checkSubscription();
     } else {
-      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      Navigator.pushNamedAndRemoveUntil(context, '/landing', (route) => false);
     }
   }
 
@@ -62,7 +62,7 @@ class _SplashScreenState extends State<SplashScreen> {
         await Supabase.instance.client.auth.signOut();
       }
       // No profile and no cache (or just offline with no prior data)
-      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      Navigator.pushNamedAndRemoveUntil(context, '/landing', (route) => false);
       return;
     }
 

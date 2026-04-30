@@ -196,7 +196,16 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 40),
+              const SizedBox(height: 8),
+              IconButton(
+                icon: const Icon(Icons.arrow_back),
+                tooltip: 'Bumalik',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                    context, '/landing', (route) => false),
+              ),
+              const SizedBox(height: 24),
               const Icon(Icons.store, size: 50, color: Color(0xFF1E88E5)),
               const SizedBox(height: 16),
               const Text('Magandang araw!',

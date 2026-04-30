@@ -11,6 +11,7 @@ import 'presentation/home/home_screen.dart';
 import 'presentation/subscription/subscription_screen.dart';
 import 'presentation/auth/reset_password_screen.dart';
 import 'presentation/admin/admin_home_screen.dart';
+import 'presentation/landing/landing_screen.dart';
 import 'providers/customer_provider.dart';
 import 'core/cache/hive_cache_service.dart';
 
@@ -107,6 +108,7 @@ class _MyAppState extends ConsumerState<MyApp> {
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
+        '/landing': (context) => const LandingScreen(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/home': (context) => const HomeScreen(),
