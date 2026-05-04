@@ -14,6 +14,8 @@ class AdminUserListScreen extends StatefulWidget {
 class _AdminUserListScreenState extends State<AdminUserListScreen> {
   final _repo = AdminRepository();
   List<ProfileModel> _users = [];
+  Set<String> _usersWithPendingPayment = {};
+  int _pendingCount = 0;
   bool _loading = true;
 
   @override
@@ -25,8 +27,19 @@ class _AdminUserListScreenState extends State<AdminUserListScreen> {
   Future<void> _loadUsers() async {
     setState(() => _loading = true);
     try {
-      final users = await _repo.getAllUsers();
-      if (mounted) setState(() => _users = users);
+      final results = await Future.wait([
+        _repo.getAllUsers(),
+        _repo.getPendingPayments(),
+      ]);
+      final users = results[0] as List<ProfileModel>;
+      final pending = results[1] as List<PaymentRequest>;
+      if (mounted) {
+        setState(() {
+          _users = users;
+          _pendingCount = pending.length;
+          _usersWithPendingPayment = pending.map((p) => p.userId).toSet();
+        });
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -79,16 +92,61 @@ class _AdminUserListScreenState extends State<AdminUserListScreen> {
       onRefresh: _loadUsers,
       child: ListView.separated(
         padding: const EdgeInsets.all(12),
-        itemCount: _users.length,
+        itemCount: _users.length + (_pendingCount > 0 ? 1 : 0),
         separatorBuilder: (_, __) => const SizedBox(height: 4),
         itemBuilder: (context, index) {
-          final user = _users[index];
+          // Pending payments banner at the top
+          if (_pendingCount > 0 && index == 0) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF3E0),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.orange),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.payment, color: Colors.orange),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '$_pendingCount pending na bayad — i-tap ang user para ma-approve',
+                      style: const TextStyle(
+                          color: Colors.orange, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final userIndex = _pendingCount > 0 ? index - 1 : index;
+          final user = _users[userIndex];
           final color = _statusColor(user.subscriptionStatus);
+          final hasPending = _usersWithPendingPayment.contains(user.id);
           return Card(
             child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: color.withOpacity(0.15),
-                child: Icon(Icons.store, color: color),
+              leading: Stack(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: color.withOpacity(0.15),
+                    child: Icon(Icons.store, color: color),
+                  ),
+                  if (hasPending)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: const BoxDecoration(
+                          color: Colors.orange,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
               ),
               title: Text(
                 user.storeName ?? '(Walang store name)',
@@ -135,7 +193,7 @@ class _AdminUserListScreenState extends State<AdminUserListScreen> {
                     builder: (_) => AdminUserDetailScreen(user: user),
                   ),
                 );
-                _loadUsers();
+                await _loadUsers();
               },
             ),
           );

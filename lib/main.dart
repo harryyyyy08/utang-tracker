@@ -13,6 +13,8 @@ import 'presentation/auth/reset_password_screen.dart';
 import 'presentation/admin/admin_home_screen.dart';
 import 'presentation/landing/landing_screen.dart';
 import 'providers/customer_provider.dart';
+import 'providers/profile_provider.dart';
+import 'providers/subscription_provider.dart';
 import 'core/cache/hive_cache_service.dart';
 
 void main() async {
@@ -52,9 +54,10 @@ class _MyAppState extends ConsumerState<MyApp> {
         _navigatorKey.currentState?.pushNamedAndRemoveUntil(
             '/reset-password', (route) => false);
       } else if (data.event == AuthChangeEvent.signedIn) {
-        // Clear stale data from previous user before loading new user's data
         ref.invalidate(customersProvider);
         ref.invalidate(totalUtangProvider);
+        ref.invalidate(profileProvider);
+        ref.invalidate(subscriptionProvider);
         if (_isHandlingDeepLink) {
           _isHandlingDeepLink = false;
           _navigatorKey.currentState?.pushNamedAndRemoveUntil(
@@ -63,6 +66,8 @@ class _MyAppState extends ConsumerState<MyApp> {
       } else if (data.event == AuthChangeEvent.signedOut) {
         ref.invalidate(customersProvider);
         ref.invalidate(totalUtangProvider);
+        ref.invalidate(profileProvider);
+        ref.invalidate(subscriptionProvider);
         HiveCacheService.instance.clearAll();
       }
     });
@@ -83,17 +88,17 @@ class _MyAppState extends ConsumerState<MyApp> {
 
   void _handleDeepLink(Uri uri) async {
     debugPrint('Deep link received: $uri');
-    if (uri.scheme == 'io.supabase.utangtracker') {
-      final code = uri.queryParameters['code'];
-      if (code != null) {
-        try {
-          _isHandlingDeepLink = true;
-          await Supabase.instance.client.auth.exchangeCodeForSession(code);
-          debugPrint('Session exchanged successfully!');
-        } catch (e) {
-          _isHandlingDeepLink = false;
-          debugPrint('Deep link error: $e');
-        }
+    if (uri.scheme != 'io.supabase.utangtracker') return;
+
+    final code = uri.queryParameters['code'];
+    if (code != null) {
+      try {
+        _isHandlingDeepLink = true;
+        await Supabase.instance.client.auth.exchangeCodeForSession(code);
+        debugPrint('Session exchanged successfully!');
+      } catch (e) {
+        _isHandlingDeepLink = false;
+        debugPrint('Deep link error: $e');
       }
     }
   }

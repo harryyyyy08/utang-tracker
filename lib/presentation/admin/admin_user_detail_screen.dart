@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/profile_model.dart';
 import '../../data/repositories/admin_repository.dart';
@@ -16,17 +17,27 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
   final _repo = AdminRepository();
   bool _loading = false;
   late ProfileModel _user;
+  List<PaymentRequest> _pendingPayments = [];
 
   @override
   void initState() {
     super.initState();
     _user = widget.user;
+    _loadPendingPayments();
+  }
+
+  Future<void> _loadPendingPayments() async {
+    try {
+      final payments = await _repo.getPendingPaymentsForUser(_user.id);
+      if (mounted) setState(() => _pendingPayments = payments);
+    } catch (_) {}
   }
 
   Future<void> _refresh() async {
     final users = await _repo.getAllUsers();
     final updated = users.where((u) => u.id == _user.id).firstOrNull;
     if (updated != null && mounted) setState(() => _user = updated);
+    await _loadPendingPayments();
   }
 
   Future<void> _runAction(Future<void> Function() action, String successMessage) async {
@@ -206,6 +217,12 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Pending payment cards
+                  if (_pendingPayments.isNotEmpty) ...[
+                    ..._pendingPayments.map((p) => _buildPendingPaymentCard(p)),
+                    const SizedBox(height: 16),
+                  ],
+
                   // User info card
                   Card(
                     child: Padding(
@@ -343,6 +360,126 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildPendingPaymentCard(PaymentRequest payment) {
+    final submitted = DateFormat('MMM d, yyyy – hh:mm a')
+        .format(payment.createdAt.toLocal());
+    return Card(
+      color: const Color(0xFFFFF8E1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: Colors.orange, width: 1.5),
+      ),
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.payment, color: Colors.orange, size: 20),
+                const SizedBox(width: 8),
+                const Text(
+                  'Pending na Bayad',
+                  style: TextStyle(
+                      color: Colors.orange,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _infoRow('Payment Code', payment.paymentCode),
+            if (payment.gcashTransactionId != null)
+              _infoRow('GCash TX ID', payment.gcashTransactionId!, copyable: true),
+            _infoRow('Naisumite', submitted),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _runAction(
+                      () => _repo.approvePayment(payment.id, _user.id),
+                      'Na-approve! Na-activate na ang subscription.',
+                    ),
+                    icon: const Icon(Icons.check, size: 18),
+                    label: const Text('I-Approve'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final ok = await _confirm(
+                        title: 'I-reject ang bayad?',
+                        message:
+                            'Ie-reject ang payment request ni $_displayName. Hindi maa-activate ang subscription niya.',
+                        confirmLabel: 'I-reject',
+                        confirmColor: Colors.red,
+                      );
+                      if (ok) {
+                        _runAction(
+                          () => _repo.rejectPayment(payment.id),
+                          'Na-reject ang payment request.',
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.close, size: 18),
+                    label: const Text('I-Reject'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _infoRow(String label, String value, {bool copyable = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text('$label:',
+                style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: copyable
+                  ? () {
+                      Clipboard.setData(ClipboardData(text: value));
+                    }
+                  : null,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: copyable ? Colors.blue[700] : Colors.black87,
+                  decoration: copyable ? TextDecoration.underline : null,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

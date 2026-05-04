@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/subscription_provider.dart';
 import 'edit_profile_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -199,6 +200,8 @@ class SettingsScreen extends ConsumerWidget {
           ),
 
           const Divider(),
+          _SubscriptionTile(),
+          const Divider(),
           ListTile(
             leading: const Icon(Icons.email),
             title: const Text('Email'),
@@ -209,19 +212,70 @@ class SettingsScreen extends ConsumerWidget {
             leading: const Icon(Icons.logout, color: Colors.red),
             title:
                 const Text('Mag-logout', style: TextStyle(color: Colors.red)),
-            onTap: () async {
-              await Supabase.instance.client.auth.signOut();
-              if (context.mounted) {
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  '/login',
-                  (route) => false,
-                );
-              }
+            onTap: () {
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/login',
+                (route) => false,
+              );
+              Supabase.instance.client.auth.signOut();
             },
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SubscriptionTile extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final subAsync = ref.watch(subscriptionProvider);
+
+    return subAsync.when(
+      data: (sub) {
+        final isActive = sub.status == SubscriptionStatus.active;
+        final isTrial = sub.status == SubscriptionStatus.trial;
+
+        String statusText;
+        Color statusColor;
+        IconData statusIcon;
+
+        if (isActive) {
+          statusText = 'Active — mag-renew sa subscription page';
+          statusColor = Colors.green;
+          statusIcon = Icons.workspace_premium;
+        } else if (isTrial) {
+          statusText = '${sub.daysRemaining} araw na natitira sa Free Trial';
+          statusColor = sub.daysRemaining <= 7 ? Colors.orange : Colors.blue;
+          statusIcon = Icons.hourglass_bottom;
+        } else {
+          statusText = 'Expired — mag-subscribe na';
+          statusColor = Colors.red;
+          statusIcon = Icons.lock_outline;
+        }
+
+        return ListTile(
+          leading: Icon(statusIcon, color: statusColor),
+          title: const Text('Subscription'),
+          subtitle: Text(statusText,
+              style: TextStyle(color: statusColor, fontSize: 12)),
+          trailing: TextButton(
+            onPressed: () => Navigator.pushNamed(
+              context,
+              '/subscription',
+              arguments: false,
+            ),
+            child: const Text('Tingnan'),
+          ),
+        );
+      },
+      loading: () => const ListTile(
+        leading: Icon(Icons.workspace_premium),
+        title: Text('Subscription'),
+        subtitle: Text('Nilo-load...'),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 }

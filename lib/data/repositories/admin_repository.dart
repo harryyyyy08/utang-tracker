@@ -1,6 +1,30 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/profile_model.dart';
 
+class PaymentRequest {
+  final String id;
+  final String userId;
+  final String paymentCode;
+  final String? gcashTransactionId;
+  final DateTime createdAt;
+
+  PaymentRequest({
+    required this.id,
+    required this.userId,
+    required this.paymentCode,
+    this.gcashTransactionId,
+    required this.createdAt,
+  });
+
+  factory PaymentRequest.fromJson(Map<String, dynamic> json) => PaymentRequest(
+        id: json['id'] as String,
+        userId: json['user_id'] as String,
+        paymentCode: json['payment_code'] as String,
+        gcashTransactionId: json['gcash_transaction_id'] as String?,
+        createdAt: DateTime.parse(json['created_at'] as String),
+      );
+}
+
 class AdminRepository {
   final _client = Supabase.instance.client;
 
@@ -107,6 +131,40 @@ class AdminRepository {
       'subscription_status': 'expired',
       'subscription_expiry': expired.toIso8601String(),
     }).eq('id', userId);
+  }
+
+  Future<List<PaymentRequest>> getPendingPayments() async {
+    final data = await _client
+        .from('payments')
+        .select()
+        .eq('status', 'pending')
+        .order('created_at', ascending: true);
+    return (data as List).map((e) => PaymentRequest.fromJson(e)).toList();
+  }
+
+  Future<List<PaymentRequest>> getPendingPaymentsForUser(String userId) async {
+    final data = await _client
+        .from('payments')
+        .select()
+        .eq('user_id', userId)
+        .eq('status', 'pending')
+        .order('created_at', ascending: false);
+    return (data as List).map((e) => PaymentRequest.fromJson(e)).toList();
+  }
+
+  Future<void> approvePayment(String paymentId, String userId) async {
+    await _client
+        .from('payments')
+        .update({'status': 'approved'})
+        .eq('id', paymentId);
+    await activateSubscription(userId);
+  }
+
+  Future<void> rejectPayment(String paymentId) async {
+    await _client
+        .from('payments')
+        .update({'status': 'rejected'})
+        .eq('id', paymentId);
   }
 
   /// Restores the user's trial period based on their original signup date.
