@@ -13,6 +13,7 @@ class LandingScreen extends StatelessWidget {
             _HeroSection(),
             const _FeaturesSection(),
             const _HowToUseSection(),
+            const _TestimonialsSection(),
             const _CtaSection(),
             const SizedBox(height: 32),
           ],
@@ -369,6 +370,151 @@ class _StepRow extends StatelessWidget {
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Testimonials ──────────────────────────────────────────────────────────────
+
+class _TestimonialsSection extends StatelessWidget {
+  const _TestimonialsSection();
+
+  static const _testimonials = [
+    (
+      name: 'Maria S.',
+      location: 'Sari-sari store, Cavite',
+      quote:
+          '"Hindi na ako nag-aalala sa utang ng mga suki ko. Alam ko na lagi kung sino ang may utang at magkano!"',
+    ),
+    (
+      name: 'Jun R.',
+      location: 'Tindahan, Quezon City',
+      quote:
+          '"Dati papel lang ang ginagamit ko. Ngayon nasa app na lahat — mas maayos at hindi na nawawala ang records."',
+    ),
+    (
+      name: 'Nena L.',
+      location: 'Grocery, Bulacan',
+      quote:
+          '"Yung SMS reminder feature ang nagustuhan ko. Hindi na kailangang personal pang kakausapin ang customer."',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Ano ang sabi ng mga users?',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1A1A1A),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Ginagamit na ng mga tindero at tindera sa buong Pilipinas.',
+            style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 16),
+          ..._testimonials.map((t) => _TestimonialCard(
+                name: t.name,
+                location: t.location,
+                quote: t.quote,
+              )),
+        ],
+      ),
+    );
+  }
+}
+
+class _TestimonialCard extends StatelessWidget {
+  final String name;
+  final String location;
+  final String quote;
+
+  const _TestimonialCard({
+    required this.name,
+    required this.location,
+    required this.quote,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE0E0E0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.star, color: Color(0xFFFFC107), size: 16),
+              Icon(Icons.star, color: Color(0xFFFFC107), size: 16),
+              Icon(Icons.star, color: Color(0xFFFFC107), size: 16),
+              Icon(Icons.star, color: Color(0xFFFFC107), size: 16),
+              Icon(Icons.star, color: Color(0xFFFFC107), size: 16),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            quote,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF1A1A1A),
+              height: 1.5,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: const Color(0xFF1E88E5).withValues(alpha: 0.15),
+                child: Text(
+                  name[0],
+                  style: const TextStyle(
+                    color: Color(0xFF1E88E5),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          color: Color(0xFF1A1A1A))),
+                  Text(location,
+                      style: TextStyle(
+                          fontSize: 11, color: Colors.grey[500])),
+                ],
+              ),
+            ],
           ),
         ],
       ),

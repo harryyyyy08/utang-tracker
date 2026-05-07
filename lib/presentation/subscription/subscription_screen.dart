@@ -40,6 +40,47 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       final supabase = Supabase.instance.client;
       final userId = supabase.auth.currentUser!.id;
 
+      // Block if there's already a pending payment
+      final pending = await supabase
+          .from('payments')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('status', 'pending');
+      if ((pending as List).isNotEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'May pending na bayad ka pa. Hintayin muna ang approval bago mag-submit ulit.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          setState(() => _submitted = true);
+        }
+        return;
+      }
+
+      // Block if submitted 3+ times today already
+      final todayStart = DateTime.now().toUtc().copyWith(
+          hour: 0, minute: 0, second: 0, millisecond: 0, microsecond: 0);
+      final todaySubmissions = await supabase
+          .from('payments')
+          .select('id')
+          .eq('user_id', userId)
+          .gte('created_at', todayStart.toIso8601String());
+      if ((todaySubmissions as List).length >= 3) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Naabot na ang limit ng submissions ngayon. Subukan ulit bukas.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
       await supabase.from('payments').insert({
         'user_id': userId,
         'payment_code': _paymentCode,
@@ -243,6 +284,25 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 15),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.schedule, color: Colors.white, size: 14),
+                SizedBox(width: 6),
+                Text(
+                  'Ia-approve sa loob ng 1 oras · 8AM – 10PM',
+                  style: TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           const Text('1. Mag-GCash ng ₱99 sa:',

@@ -56,6 +56,7 @@ class _MyAppState extends ConsumerState<MyApp> {
       } else if (data.event == AuthChangeEvent.signedIn) {
         ref.invalidate(customersProvider);
         ref.invalidate(totalUtangProvider);
+        ref.invalidate(monthlyCollectionsProvider);
         ref.invalidate(profileProvider);
         ref.invalidate(subscriptionProvider);
         if (_isHandlingDeepLink) {
@@ -66,6 +67,7 @@ class _MyAppState extends ConsumerState<MyApp> {
       } else if (data.event == AuthChangeEvent.signedOut) {
         ref.invalidate(customersProvider);
         ref.invalidate(totalUtangProvider);
+        ref.invalidate(monthlyCollectionsProvider);
         ref.invalidate(profileProvider);
         ref.invalidate(subscriptionProvider);
         HiveCacheService.instance.clearAll();

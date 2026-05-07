@@ -41,7 +41,7 @@ class AdminRepository {
   Future<void> activateSubscription(String userId) async {
     final data = await _client
         .from('profiles')
-        .select('referred_by, referral_reward_paid')
+        .select('referred_by, referral_reward_paid, subscription_status, subscription_expiry')
         .eq('id', userId)
         .single();
 
@@ -50,12 +50,28 @@ class AdminRepository {
     final hasUnpaidReferral = referrerId != null && !rewardPaid;
 
     final now = DateTime.now().toUtc();
-    // Referred user (first subscription): 60 days. Normal: 30 days.
+    final currentStatus = data['subscription_status'] as String?;
+    final currentExpiryStr = data['subscription_expiry'] as String?;
+    final currentExpiry = currentExpiryStr != null
+        ? DateTime.parse(currentExpiryStr).toUtc()
+        : null;
+
+    // If already active and expiry is still in the future, extend from there.
+    // Otherwise (trial/expired), start from now.
+    final base = (currentStatus == 'active' &&
+            currentExpiry != null &&
+            currentExpiry.isAfter(now))
+        ? currentExpiry
+        : now;
+
+    // Referred user (first subscription only): 60 days. Normal renewal: 30 days.
     final expiry = hasUnpaidReferral
-        ? DateTime(now.year, now.month + 2, now.day,
-                now.hour, now.minute, now.second)
+        ? DateTime(base.year, base.month + 2, base.day,
+                base.hour, base.minute, base.second)
             .toUtc()
-        : now.add(const Duration(days: 30));
+        : DateTime(base.year, base.month + 1, base.day,
+                base.hour, base.minute, base.second)
+            .toUtc();
 
     await _client.from('profiles').update({
       'subscription_status': 'active',
